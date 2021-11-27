@@ -1,17 +1,19 @@
 import pygame
+import random
 from pygame.locals import *
 from itertools import cycle
 import sys
 
-SCREENWIDTH = 822       # 窗口宽度
-SCREENHEIGHT = 199      # 窗口高度
-FPS = 30                # 窗口更新画面的时间
+SCREENWIDTH = 822  # 窗口宽度
+SCREENHEIGHT = 199  # 窗口高度
+FPS = 30  # 窗口更新画面的时间
+
 
 def mainGame():
-    score = 0   # 得分
+    score = 0  # 得分
     over = False
-    global SCREEN,  FPSCLOCK
-    pygame.init()       # pygame初始化
+    global SCREEN, FPSCLOCK
+    pygame.init()  # pygame初始化
     # 创建clock对象，控制每个循环多长时间执行一次
     FPSCLOCK = pygame.time.Clock()
     # 创建窗体，进行程序交互
@@ -24,21 +26,46 @@ def mainGame():
 
     # 创建玛丽对象
     marie = Marie()
+    # 创建障碍物信息
+    addObstaleTimer = 0  # 添加障碍物的时间
+    obstacle_list = []  # 障碍物对象列表
+    # 创建背景音乐按钮
+    music_button = Music_Button()
+    btn_img = music_button.open_img
+    # 循环播放
+    music_button.bg_music.play(-1)
 
     # 检查窗体的显示与刷新
     while True:
         # 获取单机事件，需要循环检查发生的每个事件
         for event in pygame.event.get():
             if event.type == QUIT:
-                pygame.quit()       # 退出窗口
-                sys.exit()          # 关闭窗口
+                pygame.quit()  # 退出窗口
+                sys.exit()  # 关闭窗口
             # 判断是否按下了空格
             if event.type == KEYDOWN and event.key == K_SPACE:
-                if marie.rect.y >= marie.lowest_y:      # 如果玛丽在地面上
-                    marie.jump_audio.play()             # 播放跳跃音效
-                    marie.jump()                        # 开启跳跃状态
+                if marie.rect.y >= marie.lowest_y:  # 如果玛丽在地面上
+                    marie.jump_audio.play()  # 播放跳跃音效
+                    marie.jump()  # 开启跳跃状态
+            # 判断鼠标事件
+            if event.type == pygame.MOUSEBUTTONUP:
+                if music_button.is_select():
+                    # 修改播放状态
+                    if music_button.is_open:
+                        # 关闭播放状态
+                        music_button.is_open = False
+                        # 关闭后显示关闭状态的图片
+                        btn_img = music_button.close_img
+                        # 停止播放
+                        music_button.bg_music.stop()
+                    else:
+                        # 相反操作
+                        music_button.is_open = True
+                        btn_img = music_button.open_img
+                        music_button.bg_music.play(-1)
+
         # 实现地图循环滚动
-        if over == False:
+        if not over:
             # 绘制地图，贴到幕布上
             bg1.map_update()
             # 地图移动
@@ -52,11 +79,34 @@ def mainGame():
             # 绘制玛丽
             marie.draw_marie()
 
+            # 计算障碍物出现的时间，添加障碍物
+            if addObstaleTimer > 1300:
+                r = random.randint(0, 100)
+                if r > 40:
+                    # 创建障碍物
+                    obstacle = Obstacle()
+                    # 添加障碍物到列表中去
+                    obstacle_list.append(obstacle)
+                # 重置添加时间
+                addObstaleTimer = 0
+            # 遍历障碍物列表，绘制障碍物
+            for i in range(len(obstacle_list)):
+                obstacle_list[i].obstacle_move()
+                obstacle_list[i].draw_obstacle()
+
+            # 绘制播放音乐按钮
+            SCREEN.blit(btn_img, (20, 20))
+
+        # 增加障碍物时间
+        addObstaleTimer += 20
+
         # 按时间更新窗口，先更新，再停顿
         pygame.display.update()
         FPSCLOCK.tick(FPS)
+
+
 # 移动地图
-class MyMap():
+class MyMap:
 
     def __init__(self, x, y):
         # 加载背景图片，载入图片之后进行转换为RGBA像素格式，Alpha为透明度
@@ -71,23 +121,25 @@ class MyMap():
             self.x = 800
         else:
             self.x -= 5
+
     # 更新地图
     def map_update(self):
         # Surface对象，将图片贴到自身上面，参数1：source，为一个Surface对象，参数2：元组，表示坐标
         SCREEN.blit(self.bg, (self.x, self.y))
 
+
 # 跳动的玛丽类
-class Marie():
+class Marie:
     def __init__(self):
         # 初始化代表玛丽的矩形，左端点、上端点、宽度、高度
         self.rect = pygame.Rect(0, 0, 0, 0)
-        self.jumpState = False      # 跳跃的状态
-        self.jumpHeight = 130       # 跳跃的高度
-        self.lowest_y = 140         # 跳跃的最低坐标，画布中坐标y轴向下增大
-        self.jumpValue = 0          # 跳跃增变量
+        self.jumpState = False  # 跳跃的状态
+        self.jumpHeight = 130  # 跳跃的高度
+        self.lowest_y = 140  # 跳跃的最低坐标，画布中坐标y轴向下增大
+        self.jumpValue = 0  # 跳跃增变量
         # 玛丽动图索引
         self.marieIndex = 0
-        self.marieIndexGen = cycle([0, 1, 2])       # 以输入的列表为参数，生成无穷序列
+        self.marieIndexGen = cycle([0, 1, 2])  # 以输入的列表为参数，生成无穷序列
         # 加载玛丽图片
         self.adventure_img = (
             pygame.image.load("image/adventure1.png").convert_alpha(),
@@ -111,13 +163,13 @@ class Marie():
     # 移动动作
     def move(self):
         if self.jumpState:
-            if self.rect.y >= self.lowest_y:        # 起跳时已经在空中或者站在地上了
-                self.jumpValue = -5                 # 以5个像素值向上移动
-            if self.rect.y <= self.lowest_y - self.jumpHeight:      # 到达顶部回落
+            if self.rect.y >= self.lowest_y:  # 起跳时已经在空中或者站在地上了
+                self.jumpValue = -5  # 以5个像素值向上移动
+            if self.rect.y <= self.lowest_y - self.jumpHeight:  # 到达顶部回落
                 self.jumpValue = 5
-            self.rect.y += self.jumpValue       # 改变坐标
-            if self.rect.y >= self.lowest_y:    # 回落到地上
-                self.jumpState = False          # 关闭跳跃状态
+            self.rect.y += self.jumpValue  # 改变坐标
+            if self.rect.y >= self.lowest_y:  # 回落到地上
+                self.jumpState = False  # 关闭跳跃状态
 
     # 绘制
     def draw_marie(self):
@@ -127,6 +179,77 @@ class Marie():
         SCREEN.blit(self.adventure_img[marieIndex], (self.x, self.rect.y))
 
 
+# 障碍物类
+class Obstacle:
+    score = 1  # 分数
+    move = 5  # 单位时间移动距离，或称为移动速度
+    obstacle_y = 150  # 障碍物坐标
 
-if __name__=='__main__':
+    def __init__(self):
+        self.rect = pygame.Rect(0, 0, 0, 0)
+        # 加载导弹图片、管道图片
+        self.missile = pygame.image.load("image/missile.png").convert_alpha()
+        self.pipe = pygame.image.load("image/pipe.png").convert_alpha()
+        # 分数图片
+        self.numbers = (
+            pygame.image.load('image/0.png').convert_alpha(),
+            pygame.image.load('image/1.png').convert_alpha(),
+            pygame.image.load('image/2.png').convert_alpha(),
+            pygame.image.load('image/3.png').convert_alpha(),
+            pygame.image.load('image/4.png').convert_alpha(),
+            pygame.image.load('image/5.png').convert_alpha(),
+            pygame.image.load('image/6.png').convert_alpha(),
+            pygame.image.load('image/7.png').convert_alpha(),
+            pygame.image.load('image/8.png').convert_alpha(),
+            pygame.image.load('image/9.png').convert_alpha()
+        )
+        # 加载加分音效
+        self.score_audio = pygame.mixer.Sound('audio/score.wav')
+        # 0 1随机数
+        r = random.randint(0, 1)
+        if r == 0:
+            self.image = self.missile
+            self.move = 15  # 导弹移动速度加快
+            self.obstacle_y = 100
+        else:
+            self.image = self.pipe
+        # 根据障碍物位图的高宽设置矩形
+        self.rect.size = self.image.get_size()
+        # 获取位图宽高
+        self.width, self.height = self.rect.size
+        # 障碍物绘制坐标
+        self.x = 800
+        self.y = self.obstacle_y
+        self.rect.center = (self.x, self.y)
+
+    # 障碍物移动
+    def obstacle_move(self):
+        self.rect.x -= self.move
+
+    # 绘制障碍物
+    def draw_obstacle(self):
+        SCREEN.blit(self.image, (self.rect.x, self.rect.y))
+
+
+# 背景音乐按钮
+class Music_Button:
+    is_open = True
+
+    def __init__(self):
+        # 背景音乐及其按钮（两个状态）
+        self.bg_music = pygame.mixer.Sound('audio/bg_music.wav')
+        self.open_img = pygame.image.load('image/btn_open.png').convert_alpha()
+        self.close_img = pygame.image.load('image/btn_close.png').convert_alpha()
+
+    # 判断鼠标是否在按钮范围内
+    def is_select(self):
+        # 获取鼠标位置
+        point_x, point_y = pygame.mouse.get_pos()
+        w, h = self.open_img.get_size()
+        # 判断鼠标是否在按钮范围内，20为按钮x,y轴坐标
+        in_x = 20 < point_x < 20 + w
+        in_y = 20 < point_y < 20 + h
+        return in_x and in_y
+
+if __name__ == '__main__':
     mainGame()
