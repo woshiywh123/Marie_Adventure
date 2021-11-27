@@ -190,7 +190,7 @@ class Marie:
     # 移动动作
     def move(self):
         if self.jumpState:
-            if self.rect.y >= self.lowest_y:  # 起跳时已经在空中或者站在地上了
+            if self.rect.y >= self.lowest_y:  # 起跳时已经站在地上了
                 self.jumpValue = -5  # 以5个像素值向上移动
             if self.rect.y <= self.lowest_y - self.jumpHeight:  # 到达顶部回落
                 self.jumpValue = 5
