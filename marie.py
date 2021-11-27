@@ -8,6 +8,18 @@ SCREENWIDTH = 822  # 窗口宽度
 SCREENHEIGHT = 199  # 窗口高度
 FPS = 30  # 窗口更新画面的时间
 
+# 游戏结束
+def game_over():
+    bump_audio = pygame.mixer.Sound('audio/bump.wav')       # 撞击音效
+    bump_audio.play()       # 播放撞击音效
+    # 获取窗体的高、宽
+    screen_w = pygame.display.Info().current_w
+    screen_h = pygame.display.Info().current_h
+    # 加载游戏结束的照片
+    over_img = pygame.image.load('image/gameover.png').convert_alpha()
+    # 图片绘制在窗口中间位置
+    SCREEN.blit(over_img, ((screen_w - over_img.get_width()) / 2, (screen_h - over_img.get_height()) / 2))
+
 
 def mainGame():
     score = 0  # 得分
@@ -47,6 +59,9 @@ def mainGame():
                 if marie.rect.y >= marie.lowest_y:  # 如果玛丽在地面上
                     marie.jump_audio.play()  # 播放跳跃音效
                     marie.jump()  # 开启跳跃状态
+                # 判断游戏是否结束，结束后按空格键重新开始游戏
+                if over:
+                    mainGame()
             # 判断鼠标事件
             if event.type == pygame.MOUSEBUTTONUP:
                 if music_button.is_select():
@@ -93,7 +108,19 @@ def mainGame():
             for i in range(len(obstacle_list)):
                 obstacle_list[i].obstacle_move()
                 obstacle_list[i].draw_obstacle()
-
+                # 判断玛丽与障碍物是否碰撞
+                if pygame.sprite.collide_rect(marie, obstacle_list[i]):
+                    # 发生碰撞，游戏结束
+                    over = True
+                    game_over()
+                    music_button.bg_music.stop()
+                else:
+                    # 判断玛丽是否越过障碍物
+                    if (obstacle_list[i].rect.x + obstacle_list[i].rect.width) < marie.rect.x:
+                        # 加分
+                        score += obstacle_list[i].get_score()
+                # 显示分数
+                obstacle_list[i].show_score(score)
             # 绘制播放音乐按钮
             SCREEN.blit(btn_img, (20, 20))
 
@@ -229,6 +256,32 @@ class Obstacle:
     # 绘制障碍物
     def draw_obstacle(self):
         SCREEN.blit(self.image, (self.rect.x, self.rect.y))
+
+    # 得分
+    def get_score(self):
+        temp = self.score
+        if temp == 1:
+            # 播放加分音乐
+            self.score_audio.play()
+        # 将障碍物的得分置0，否则会一直判断越过障碍物加分
+        self.score = 0
+        return temp
+
+    # 显示指定分数
+    def show_score(self, score):
+        # 获取得分数字
+        self.scoreDigits = [int(x) for x in list(str(score))]
+        totalWidth = 0      # 要显示的所有数字的总宽度
+        for digit in self.scoreDigits:
+            # 获取积分图片的宽度
+            totalWidth += self.numbers[digit].get_width()
+        # 分数横向位置，右边空出30个像素点
+        Xoffset = (SCREENWIDTH - (totalWidth + 30))
+        for digit in self.scoreDigits:
+            # 分数绘制
+            SCREEN.blit(self.numbers[digit], (Xoffset, SCREENHEIGHT * 0.1))
+            # 随数字增加改变位置
+            Xoffset += self.numbers[digit].get_width()
 
 
 # 背景音乐按钮
