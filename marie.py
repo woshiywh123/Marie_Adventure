@@ -7,11 +7,16 @@ import sys
 SCREENWIDTH = 822  # 窗口宽度
 SCREENHEIGHT = 199  # 窗口高度
 FPS = 30  # 窗口更新画面的时间
+# 创建窗体，进行程序交互
+SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+# 创建clock对象，控制每个循环多长时间执行一次
+FPS_CLOCK = pygame.time.Clock()
+
 
 # 游戏结束
 def game_over():
-    bump_audio = pygame.mixer.Sound('audio/bump.wav')       # 撞击音效
-    bump_audio.play()       # 播放撞击音效
+    bump_audio = pygame.mixer.Sound('audio/bump.wav')  # 撞击音效
+    bump_audio.play()  # 播放撞击音效
     # 获取窗体的高、宽
     screen_w = pygame.display.Info().current_w
     screen_h = pygame.display.Info().current_h
@@ -21,15 +26,10 @@ def game_over():
     SCREEN.blit(over_img, ((screen_w - over_img.get_width()) / 2, (screen_h - over_img.get_height()) / 2))
 
 
-def mainGame():
+def main_game():
     score = 0  # 得分
     over = False
-    global SCREEN, FPSCLOCK
     pygame.init()  # pygame初始化
-    # 创建clock对象，控制每个循环多长时间执行一次
-    FPSCLOCK = pygame.time.Clock()
-    # 创建窗体，进行程序交互
-    SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
     # 设置当前窗口标题
     pygame.display.set_caption('玛丽冒险')
     # 创建地图对象
@@ -39,10 +39,10 @@ def mainGame():
     # 创建玛丽对象
     marie = Marie()
     # 创建障碍物信息
-    addObstaleTimer = 0  # 添加障碍物的时间
+    add_obstacle_timer = 0  # 添加障碍物的时间
     obstacle_list = []  # 障碍物对象列表
     # 创建背景音乐按钮
-    music_button = Music_Button()
+    music_button = MusicButton()
     btn_img = music_button.open_img
     # 循环播放
     music_button.bg_music.play(-1)
@@ -61,7 +61,7 @@ def mainGame():
                     marie.jump()  # 开启跳跃状态
                 # 判断游戏是否结束，结束后按空格键重新开始游戏
                 if over:
-                    mainGame()
+                    main_game()
             # 判断鼠标事件
             if event.type == pygame.MOUSEBUTTONUP:
                 if music_button.is_select():
@@ -95,7 +95,7 @@ def mainGame():
             marie.draw_marie()
 
             # 计算障碍物出现的时间，添加障碍物
-            if addObstaleTimer > 1300:
+            if add_obstacle_timer > 1300:
                 r = random.randint(0, 100)
                 if r > 40:
                     # 创建障碍物
@@ -103,7 +103,7 @@ def mainGame():
                     # 添加障碍物到列表中去
                     obstacle_list.append(obstacle)
                 # 重置添加时间
-                addObstaleTimer = 0
+                add_obstacle_timer = 0
             # 遍历障碍物列表，绘制障碍物
             for i in range(len(obstacle_list)):
                 obstacle_list[i].obstacle_move()
@@ -125,11 +125,11 @@ def mainGame():
             SCREEN.blit(btn_img, (20, 20))
 
         # 增加障碍物时间
-        addObstaleTimer += 20
+        add_obstacle_timer += 20
 
         # 按时间更新窗口，先更新，再停顿
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        FPS_CLOCK.tick(FPS)
 
 
 # 移动地图
@@ -201,9 +201,9 @@ class Marie:
     # 绘制
     def draw_marie(self):
         # 匹配动图
-        marieIndex = next(self.marieIndexGen)
+        marie_index = next(self.marieIndexGen)
         # 绘制图像
-        SCREEN.blit(self.adventure_img[marieIndex], (self.x, self.rect.y))
+        SCREEN.blit(self.adventure_img[marie_index], (self.x, self.rect.y))
 
 
 # 障碍物类
@@ -270,22 +270,22 @@ class Obstacle:
     # 显示指定分数
     def show_score(self, score):
         # 获取得分数字
-        self.scoreDigits = [int(x) for x in list(str(score))]
-        totalWidth = 0      # 要显示的所有数字的总宽度
-        for digit in self.scoreDigits:
+        self.score_digits = [int(x) for x in list(str(score))]
+        total_width = 0  # 要显示的所有数字的总宽度
+        for digit in self.score_digits:
             # 获取积分图片的宽度
-            totalWidth += self.numbers[digit].get_width()
+            total_width += self.numbers[digit].get_width()
         # 分数横向位置，右边空出30个像素点
-        Xoffset = (SCREENWIDTH - (totalWidth + 30))
-        for digit in self.scoreDigits:
+        x_offset = (SCREENWIDTH - (total_width + 30))
+        for digit in self.score_digits:
             # 分数绘制
-            SCREEN.blit(self.numbers[digit], (Xoffset, SCREENHEIGHT * 0.1))
+            SCREEN.blit(self.numbers[digit], (x_offset, SCREENHEIGHT * 0.1))
             # 随数字增加改变位置
-            Xoffset += self.numbers[digit].get_width()
+            x_offset += self.numbers[digit].get_width()
 
 
 # 背景音乐按钮
-class Music_Button:
+class MusicButton:
     is_open = True
 
     def __init__(self):
@@ -304,5 +304,6 @@ class Music_Button:
         in_y = 20 < point_y < 20 + h
         return in_x and in_y
 
+
 if __name__ == '__main__':
-    mainGame()
+    main_game()
